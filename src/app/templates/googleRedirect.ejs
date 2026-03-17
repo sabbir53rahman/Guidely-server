@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Authenticating | HealthCare</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --primary: #10b981;
+        --primary-dark: #059669;
+        --bg: #f8fafc;
+        --card-bg: #ffffff;
+        --text-main: #1e293b;
+        --text-muted: #64748b;
+        --shadow:
+          0 10px 25px -5px rgba(0, 0, 0, 0.1),
+          0 8px 10px -6px rgba(0, 0, 0, 0.1);
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family:
+          "Inter",
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          Roboto,
+          sans-serif;
+        background-color: var(--bg);
+        color: var(--text-main);
+        height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+      }
+
+      .container {
+        width: 100%;
+        max-width: 420px;
+        padding: 2rem;
+        text-align: center;
+        animation: fadeIn 0.6s ease-out;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .card {
+        background: var(--card-bg);
+        padding: 3rem 2rem;
+        border-radius: 1.5rem;
+        box-shadow: var(--shadow);
+        border: 1px solid rgba(0, 0, 0, 0.05);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 1.5rem;
+      }
+
+      .logo-icon {
+        width: 64px;
+        height: 64px;
+        background: linear-gradient(135deg, #10b981 0%, #3b82f6 100%);
+        border-radius: 1rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: 700;
+        font-size: 1.5rem;
+        margin-bottom: 0.5rem;
+      }
+
+      .spinner {
+        width: 48px;
+        height: 48px;
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid var(--primary);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+
+      .title {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: var(--text-main);
+      }
+
+      .subtitle {
+        font-size: 1rem;
+        color: var(--text-muted);
+        line-height: 1.5;
+      }
+
+      .footer {
+        margin-top: 2rem;
+        font-size: 0.875rem;
+        color: var(--text-muted);
+      }
+
+      .error-container {
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        gap: 1rem;
+      }
+
+      .error-icon {
+        color: #ef4444;
+        font-size: 3rem;
+      }
+
+      .btn {
+        display: inline-block;
+        padding: 0.75rem 1.5rem;
+        background-color: var(--primary);
+        color: white;
+        text-decoration: none;
+        border-radius: 0.5rem;
+        font-weight: 500;
+        transition: background-color 0.2s;
+        border: none;
+        cursor: pointer;
+        font-family: inherit;
+      }
+
+      .btn:hover {
+        background-color: var(--primary-dark);
+      }
+
+      .security-badge {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: #f1f5f9;
+        padding: 0.4rem 0.8rem;
+        border-radius: 2rem;
+        font-size: 0.75rem;
+        font-weight: 500;
+        color: #475569;
+      }
+
+      .loader-content {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 1.5rem;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div id="content" class="card">
+        <div id="loading" class="loader-content">
+          <div class="logo-icon">H</div>
+          <div class="spinner"></div>
+          <div>
+            <h1 class="title">Redirecting...</h1>
+            <p class="subtitle">Securely connecting to Google</p>
+          </div>
+          <div class="security-badge">
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            </svg>
+            SSL Secure Connection
+          </div>
+        </div>
+
+        <div id="error" class="error-container">
+          <div class="error-icon">⚠️</div>
+          <h1 class="title">Connection Error</h1>
+          <p id="error-message" class="subtitle">
+            We couldn't reach Google. Please check your connection and try
+            again.
+          </p>
+          <button onclick="window.location.reload()" class="btn">
+            Try Again
+          </button>
+        </div>
+      </div>
+      <div class="footer">&copy; 2026 HealthCare. All rights reserved.</div>
+    </div>
+
+    <script>
+      (async () => {
+        try {
+          const response = await fetch(
+            "<%= betterAuthUrl %>/api/auth/sign-in/social",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              credentials: "include",
+              body: JSON.stringify({
+                provider: "google",
+                callbackURL: "<%= callbackURL %>",
+              }),
+            },
+          );
+
+          const data = await response.json();
+
+          if (data.url) {
+            window.location.href = data.url;
+          } else {
+            document.body.innerHTML = `<div>
+                    <p>
+                        Error Occurred While Redirecting To Google. Please Try Again Later.
+                    </p>
+                    </div>`;
+          }
+        } catch (error) {
+          document.body.innerHTML = `<div>
+                    <p>
+                        Error Occurred While Redirecting To Google. Please Try Again Later.
+                        ${error.message}
+                    </p>
+                    </div>`;
+        }
+      })();
+    </script>
+  </body>
+</html>
