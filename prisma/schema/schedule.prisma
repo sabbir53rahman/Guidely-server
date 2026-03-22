@@ -1,0 +1,13 @@
+model Schedule {
+  id        String    @id @default(uuid())
+  mentorId  String
+  mentor    Mentor    @relation(fields: [mentorId], references: [id])
+  dayOfWeek DayOfWeek
+  startTime String // e.g., "09:00"
+  endTime   String // e.g., "17:00"
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@unique([mentorId, dayOfWeek])
+  @@map("schedules")
+}

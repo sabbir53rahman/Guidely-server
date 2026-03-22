@@ -39,3 +39,13 @@ enum PaymentStatus {
   PAID
   UNPAID
 }
+
+enum DayOfWeek {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+  SUNDAY
+}
