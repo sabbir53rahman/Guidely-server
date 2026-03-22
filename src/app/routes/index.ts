@@ -5,6 +5,7 @@ import { AdminRoutes } from "../module/admin/admin.route";
 import { ScheduleRoutes } from "../module/schedule/schedule.route";
 import { MentorRoutes } from "../module/mentor/mentor.route";
 import { BookingRoutes } from "../module/booking/booking.route";
+import { ReviewRoutes } from "../module/review/review.route";
 
 const router = Router();
 
@@ -14,5 +15,6 @@ router.use("/admins", AdminRoutes);
 router.use("/mentors", MentorRoutes);
 router.use("/schedules", ScheduleRoutes);
 router.use("/bookings", BookingRoutes);
+router.use("/reviews", ReviewRoutes);
 
 export const IndexRoutes = router;

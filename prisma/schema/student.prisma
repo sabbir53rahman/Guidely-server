@@ -12,6 +12,7 @@ model Student {
   updatedAt     DateTime @updatedAt
 
   bookings Booking[]
+  reviews  Review[]
 
   @@map("students")
 }

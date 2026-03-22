@@ -27,6 +27,10 @@ const createBooking = async (user: IRequestUser, payload: ICreateBookingPayload)
     throw new AppError(status.NOT_FOUND, "Mentor not found");
   }
 
+  if (!mentor.isAvailable) {
+    throw new AppError(status.FORBIDDEN, "This mentor is not currently accepting bookings.");
+  }
+
   const startDateTime = new Date(payload.startTime);
   const endDateTime = new Date(payload.endTime);
 
