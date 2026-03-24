@@ -4,15 +4,21 @@ import { catchAsync } from "../../shared/catchAsync";
 import { sendResponse } from "../../shared/sendResponse";
 import status from "http-status";
 import { MentorService } from "./mentor.service";
+import pick from "../../utils/pick";
+import { mentorFilterableFields } from "./mentor.constants";
+import { IQueryParams } from "../../interfaces/query.interface";
 
 const getAllMentors = catchAsync(async (req: Request, res: Response) => {
-  const result = await MentorService.getAllMentors();
+  const filters = pick(req.query, mentorFilterableFields) as IQueryParams;
+
+  const result = await MentorService.getAllMentors(filters);
 
   sendResponse(res, {
     httpStatusCode: status.OK,
     success: true,
     message: "Mentors retrieved successfully",
-    data: result,
+    meta: result.meta,
+    data: result.data,
   });
 });
 

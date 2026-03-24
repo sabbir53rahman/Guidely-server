@@ -3,15 +3,20 @@ import status from "http-status";
 import { catchAsync } from "../../shared/catchAsync";
 import { sendResponse } from "../../shared/sendResponse";
 import { AdminService } from "./admin.service";
+import pick from "../../utils/pick";
+import { adminFilterableFields } from "./admin.constants";
+import { IQueryParams } from "../../interfaces/query.interface";
 
 const getAllAdmins = catchAsync(async (req: Request, res: Response) => {
-  const result = await AdminService.getAllAdmins();
+  const filters = pick(req.query, adminFilterableFields) as IQueryParams;
+  const result = await AdminService.getAllAdmins(filters);
 
   sendResponse(res, {
     httpStatusCode: status.OK,
     success: true,
     message: "Admins fetched successfully",
-    data: result,
+    meta: result.meta,
+    data: result.data,
   });
 });
 

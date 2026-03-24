@@ -3,6 +3,10 @@ import AppError from "../../errorHelpers/appError";
 import { IRequestUser } from "../../interfaces/requestUser.interface";
 import { prisma } from "../../lib/prisma";
 import { ICreateReviewPayload } from "./review.interface";
+import { IQueryParams } from "../../interfaces/query.interface";
+import { QueryBuilder } from "../../utils/QueryBuilder";
+import { Review } from "../../../generated/prisma";
+import { reviewSearchableFields } from "./review.constants";
 
 const createReview = async (user: IRequestUser, payload: ICreateReviewPayload) => {
   const student = await prisma.student.findUnique({
@@ -87,23 +91,26 @@ const createReview = async (user: IRequestUser, payload: ICreateReviewPayload) =
   return result;
 };
 
-const getMentorReviews = async (mentorId: string) => {
-  const reviews = await prisma.review.findMany({
-    where: { mentorId },
-    include: {
+const getMentorReviews = async (mentorId: string, queryParams: IQueryParams) => {
+  const queryBuilder = new QueryBuilder<Review>(prisma.review, queryParams, {
+    searchableFields: reviewSearchableFields,
+  })
+    .search()
+    .filter()
+    .paginate()
+    .sort()
+    .where({ mentorId })
+    .include({
       student: {
         select: {
           name: true,
           profilePhoto: true,
         },
       },
-    },
-    orderBy: {
-      createdAt: "desc",
-    },
-  });
+    });
 
-  return reviews;
+  const result = await queryBuilder.execute();
+  return result;
 };
 
 export const ReviewService = {

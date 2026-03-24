@@ -4,17 +4,24 @@ import AppError from "../../errorHelpers/appError";
 
 import { prisma } from "../../lib/prisma";
 import { IUpdateMentorPayload } from "./mentor.interface";
+import { IQueryParams } from "../../interfaces/query.interface";
+import { QueryBuilder } from "../../utils/QueryBuilder";
+import { mentorSearchableFields } from "./mentor.constants";
+import { Mentor } from "../../../generated/prisma";
 
-const getAllMentors = async () => {
-  const mentors = await prisma.mentor.findMany({
-    where: {
-      isDeleted: false,
-    },
-    include: {
-      user: true,
-    },
-  });
-  return mentors;
+const getAllMentors = async (queryParams: IQueryParams) => {
+  const queryBuilder = new QueryBuilder<Mentor>(prisma.mentor, queryParams, {
+    searchableFields: mentorSearchableFields,
+  })
+    .search()
+    .filter()
+    .paginate()
+    .sort()
+    .where({ isDeleted: false })
+    .include({ user: true });
+
+  const result = await queryBuilder.execute();
+  return result;
 };
 
 const getMentorById = async (id: string) => {

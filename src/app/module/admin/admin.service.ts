@@ -4,14 +4,24 @@ import { prisma } from "../../lib/prisma";
 import { IUpdateAdminPayload } from "./admin.interface";
 import AppError from "../../errorHelpers/appError";
 import { IRequestUser } from "../../interfaces/requestUser.interface";
+import { IQueryParams } from "../../interfaces/query.interface";
+import { QueryBuilder } from "../../utils/QueryBuilder";
+import { Admin } from "../../../generated/prisma";
+import { adminSearchableFields } from "./admin.constants";
 
-const getAllAdmins = async () => {
-  const admins = await prisma.admin.findMany({
-    include: {
-      user: true,
-    },
-  });
-  return admins;
+const getAllAdmins = async (queryParams: IQueryParams) => {
+  const queryBuilder = new QueryBuilder<Admin>(prisma.admin, queryParams, {
+    searchableFields: adminSearchableFields,
+  })
+    .search()
+    .filter()
+    .paginate()
+    .sort()
+    .where({ isDeleted: false })
+    .include({ user: true });
+
+  const result = await queryBuilder.execute();
+  return result;
 };
 
 const getAdminById = async (id: string) => {

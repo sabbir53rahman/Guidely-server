@@ -4,6 +4,10 @@ import AppError from "../../errorHelpers/appError";
 import { IRequestUser } from "../../interfaces/requestUser.interface";
 import { prisma } from "../../lib/prisma";
 import { ICreateBookingPayload, IUpdateBookingPayload } from "./booking.interface";
+import { IQueryParams } from "../../interfaces/query.interface";
+import { QueryBuilder } from "../../utils/QueryBuilder";
+import { Booking } from "../../../generated/prisma";
+import { bookingSearchableFields } from "./booking.constants";
 
 const createBooking = async (user: IRequestUser, payload: ICreateBookingPayload) => {
   const student = await prisma.student.findUnique({
@@ -113,47 +117,60 @@ const createBooking = async (user: IRequestUser, payload: ICreateBookingPayload)
   return booking;
 };
 
-const getAllBookings = async () => {
-  const bookings = await prisma.booking.findMany({
-    include: {
+const getAllBookings = async (queryParams: IQueryParams) => {
+  const queryBuilder = new QueryBuilder<Booking>(prisma.booking, queryParams, {
+    searchableFields: bookingSearchableFields,
+  })
+    .search()
+    .filter()
+    .paginate()
+    .sort()
+    .include({
       student: true,
       mentor: true,
       payment: true,
-    },
-  });
-  return bookings;
+    });
+
+  const result = await queryBuilder.execute();
+  return result;
 };
 
-const getMyBookings = async (user: IRequestUser) => {
-  const query: { studentId?: string; mentorId?: string } = {};
+const getMyBookings = async (user: IRequestUser, queryParams: IQueryParams) => {
+  const condition: { studentId?: string; mentorId?: string } = {};
 
   if (user.role === "STUDENT") {
     const student = await prisma.student.findUnique({
       where: { userId: user.userId },
     });
     if (!student) throw new AppError(status.NOT_FOUND, "Student profile not found");
-    query.studentId = student.id;
+    condition.studentId = student.id;
   } else if (user.role === "MENTOR") {
     const mentor = await prisma.mentor.findUnique({
       where: { userId: user.userId },
     });
     if (!mentor) throw new AppError(status.NOT_FOUND, "Mentor profile not found");
-    query.mentorId = mentor.id;
+    condition.mentorId = mentor.id;
   } else {
     // If admin, they probably shouldn't use "getMyBookings", but just in case
-    return [];
+    return { data: [], meta: { page: 1, limit: 10, total: 0, totalPages: 0 } };
   }
 
-  const bookings = await prisma.booking.findMany({
-    where: query,
-    include: {
+  const queryBuilder = new QueryBuilder<Booking>(prisma.booking, queryParams, {
+    searchableFields: bookingSearchableFields,
+  })
+    .search()
+    .filter()
+    .paginate()
+    .sort()
+    .where(condition)
+    .include({
       student: true,
       mentor: true,
       payment: true,
-    },
-  });
+    });
 
-  return bookings;
+  const result = await queryBuilder.execute();
+  return result;
 };
 
 const getBookingById = async (id: string) => {
