@@ -29,6 +29,7 @@ enum BloodGroup {
 }
 
 enum AppointmentStatus {
+  PENDING
   SCHEDULED
   INPROGRESS
   COMPLETED

@@ -3,6 +3,7 @@ model Payment {
   amount             Float
   transactionId      String        @unique
   stripeEventId      String?       @unique
+  paymentIntentId    String?       @unique
   status             PaymentStatus @default(UNPAID)
   invoiceUrl         String?
   paymentGatewayData Json?

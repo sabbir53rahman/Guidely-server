@@ -8,4 +8,5 @@ export interface IUpdateMentorPayload {
   bio?: string;
   expertise?: string;
   isAvailable?: boolean;
+  hourlyRate?: number;
 }

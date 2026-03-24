@@ -8,6 +8,7 @@ import { IQueryParams } from "../../interfaces/query.interface";
 import { QueryBuilder } from "../../utils/QueryBuilder";
 import { Booking } from "../../../generated/prisma";
 import { bookingSearchableFields } from "./booking.constants";
+import { PaymentService } from "../payment/payment.service";
 
 const createBooking = async (user: IRequestUser, payload: ICreateBookingPayload) => {
   const student = await prisma.student.findUnique({
@@ -102,19 +103,28 @@ const createBooking = async (user: IRequestUser, payload: ICreateBookingPayload)
     throw new AppError(status.CONFLICT, "Mentor already has a conflicting booking at the requested time");
   }
 
-  const booking = await prisma.booking.create({
-    data: {
-      studentId: student.id,
-      mentorId: mentor.id,
-      startTime: startDateTime,
-      endTime: endDateTime,
-      notes: payload.notes,
-      status: "SCHEDULED",
-      paymentStatus: "UNPAID",
-    },
+  const result = await prisma.$transaction(async (tx) => {
+    const booking = await tx.booking.create({
+      data: {
+        studentId: student.id,
+        mentorId: mentor.id,
+        startTime: startDateTime,
+        endTime: endDateTime,
+        notes: payload.notes,
+        status: mentor.hourlyRate > 0 ? "PENDING" : "SCHEDULED",
+        paymentStatus: "UNPAID",
+      },
+    });
+
+    let paymentSessionUrl = null;
+    if (mentor.hourlyRate > 0) {
+      paymentSessionUrl = await PaymentService.createCheckoutSession(booking.id);
+    }
+
+    return { ...booking, paymentSessionUrl };
   });
 
-  return booking;
+  return result;
 };
 
 const getAllBookings = async (queryParams: IQueryParams) => {

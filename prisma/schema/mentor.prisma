@@ -12,6 +12,7 @@ model Mentor {
   bio                String?
   expertise          String?
   averageRating      Float    @default(0.0)
+  hourlyRate         Float    @default(0.0)
   isAvailable        Boolean  @default(true)
   isDeleted          Boolean  @default(false)
   createdAt          DateTime @default(now())

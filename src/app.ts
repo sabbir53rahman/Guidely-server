@@ -49,8 +49,14 @@ app.use(
 // Enable URL-encoded form data parsing
 app.use(express.urlencoded({ extended: true }));
 
-// Middleware to parse JSON bodies
-app.use(express.json());
+// Middleware to parse JSON bodies, excluding stripe webhook which needs raw body
+app.use((req, res, next) => {
+  if (req.originalUrl === "/api/v1/payments/webhook") {
+    next();
+  } else {
+    express.json()(req, res, next);
+  }
+});
 
 app.use(cookieParser());
 
