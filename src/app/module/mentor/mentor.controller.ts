@@ -22,6 +22,18 @@ const getAllMentors = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const getMyMentorProfile = catchAsync(async (req: Request, res: Response) => {
+  const user = req.user;
+  const result = await MentorService.getMyMentorProfile(user.userId);
+
+  sendResponse(res, {
+    httpStatusCode: status.OK,
+    success: true,
+    message: "Mentor profile retrieved successfully",
+    data: result,
+  });
+});
+
 const getMentorById = catchAsync(async (req: Request, res: Response) => {
   const { id } = req.params as { id: string };
   const result = await MentorService.getMentorById(id);
@@ -61,6 +73,7 @@ const deleteMentor = catchAsync(async (req: Request, res: Response) => {
 export const MentorController = {
   getAllMentors,
   getMentorById,
+  getMyMentorProfile,
   updateMentor,
   deleteMentor,
 };

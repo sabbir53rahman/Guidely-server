@@ -8,6 +8,7 @@ import { IQueryParams } from "../../interfaces/query.interface";
 import { QueryBuilder } from "../../utils/QueryBuilder";
 import { mentorSearchableFields } from "./mentor.constants";
 import { Mentor } from "../../../generated/prisma";
+import { userSafeSelect } from "../user/user.constants";
 
 const getAllMentors = async (queryParams: IQueryParams) => {
   const queryBuilder = new QueryBuilder<Mentor>(prisma.mentor, queryParams, {
@@ -18,7 +19,7 @@ const getAllMentors = async (queryParams: IQueryParams) => {
     .paginate()
     .sort()
     .where({ isDeleted: false })
-    .include({ user: true });
+    .include({ user: { select: userSafeSelect } });
 
   const result = await queryBuilder.execute();
   return result;
@@ -31,12 +32,34 @@ const getMentorById = async (id: string) => {
       isDeleted: false,
     },
     include: {
-      user: true,
+      user: {
+        select: userSafeSelect,
+      },
     },
   });
 
   if (!mentor) {
     throw new AppError(status.NOT_FOUND, "Mentor not found");
+  }
+
+  return mentor;
+};
+
+const getMyMentorProfile = async (userId: string) => {
+  const mentor = await prisma.mentor.findUnique({
+    where: {
+      userId,
+      isDeleted: false,
+    },
+    include: {
+      user: {
+        select: userSafeSelect,
+      },
+    },
+  });
+
+  if (!mentor) {
+    throw new AppError(status.NOT_FOUND, "Mentor profile not found");
   }
 
   return mentor;
@@ -103,6 +126,7 @@ const deleteMentor = async (id: string) => {
 export const MentorService = {
   getAllMentors,
   getMentorById,
+  getMyMentorProfile,
   updateMentor,
   deleteMentor,
 };

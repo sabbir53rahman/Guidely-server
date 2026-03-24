@@ -4,6 +4,7 @@ import AppError from "../../errorHelpers/appError";
 import { prisma } from "../../lib/prisma";
 import { tokenHelpers } from "../../utils/token";
 import bcrypt from "bcryptjs";
+import { userSafeSelect } from "../user/user.constants";
 import {
   ILoginUserPayload,
   IRegisterMentorPayload,
@@ -34,6 +35,7 @@ const registerStudent = async (payload: IRegisterStudentPayload) => {
         password: hashedPassword,
         role: "STUDENT",
       },
+      select: userSafeSelect,
     });
 
     const student = await tx.student.create({
@@ -92,6 +94,7 @@ const registerMentor = async (payload: IRegisterMentorPayload) => {
         password: hashedPassword,
         role: "MENTOR",
       },
+      select: userSafeSelect,
     });
 
     const mentor = await tx.mentor.create({
@@ -165,8 +168,12 @@ const loginUser = async (payload: ILoginUserPayload) => {
     name: user.name,
   });
 
+  // Omit password from the returned user object
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { password: _, ...userWithoutPassword } = user;
+
   return {
-    user,
+    user: userWithoutPassword,
     accessToken,
     refreshToken,
   };

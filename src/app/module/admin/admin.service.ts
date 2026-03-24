@@ -8,6 +8,7 @@ import { IQueryParams } from "../../interfaces/query.interface";
 import { QueryBuilder } from "../../utils/QueryBuilder";
 import { Admin } from "../../../generated/prisma";
 import { adminSearchableFields } from "./admin.constants";
+import { userSafeSelect } from "../user/user.constants";
 
 const getAllAdmins = async (queryParams: IQueryParams) => {
   const queryBuilder = new QueryBuilder<Admin>(prisma.admin, queryParams, {
@@ -18,7 +19,7 @@ const getAllAdmins = async (queryParams: IQueryParams) => {
     .paginate()
     .sort()
     .where({ isDeleted: false })
-    .include({ user: true });
+    .include({ user: { select: userSafeSelect } });
 
   const result = await queryBuilder.execute();
   return result;
@@ -30,7 +31,9 @@ const getAdminById = async (id: string) => {
       id,
     },
     include: {
-      user: true,
+      user: {
+        select: userSafeSelect,
+      },
     },
   });
   return admin;
