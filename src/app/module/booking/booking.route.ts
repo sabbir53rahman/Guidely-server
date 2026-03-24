@@ -12,6 +12,7 @@ router.get("/me", checkAuth("STUDENT", "MENTOR"), BookingController.getMyBooking
 router.get("/", checkAuth("ADMIN", "SUPER_ADMIN"), BookingController.getAllBookings);
 router.get("/:id", checkAuth("ADMIN", "SUPER_ADMIN", "STUDENT", "MENTOR"), BookingController.getBookingById);
 router.patch("/:id", checkAuth("ADMIN", "SUPER_ADMIN", "MENTOR", "STUDENT"), BookingController.updateBooking);
+router.post("/cancel/:id", checkAuth("ADMIN", "SUPER_ADMIN", "MENTOR", "STUDENT"), BookingController.cancelBooking);
 router.delete("/:id", checkAuth("ADMIN", "SUPER_ADMIN"), BookingController.deleteBooking);
 
 export const BookingRoutes = router;

@@ -4,6 +4,8 @@ import { stripe } from "../../lib/stripe";
 import "dotenv/config";
 import AppError from "../../errorHelpers/appError";
 import status from "http-status";
+import { sendEmail } from "../../utils/email";
+import { envVars } from "../../../config/env";
 
 const createCheckoutSession = async (bookingId: string) => {
   const booking = await prisma.booking.findUnique({
@@ -96,11 +98,10 @@ const handleWebhook = async (payload: string, signature: string) => {
   }
 
   if (event.type === "checkout.session.completed") {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const session = event.data.object as any;
     const bookingId = session.client_reference_id;
     const stripeEventId = event.id;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const paymentIntentId = session.payment_intent;
     const paymentGatewayData = JSON.parse(JSON.stringify(session));
 
     await prisma.$transaction(async (tx) => {
@@ -119,16 +120,77 @@ const handleWebhook = async (payload: string, signature: string) => {
         data: {
           status: "PAID",
           stripeEventId: stripeEventId,
+          paymentIntentId: paymentIntentId,
           paymentGatewayData: paymentGatewayData,
         },
       });
     });
+
+    // 3. Send Confirmation Email
+    const bookingDetails = await prisma.booking.findUnique({
+      where: { id: bookingId },
+      include: {
+        student: true,
+        mentor: true,
+      },
+    });
+
+    if (bookingDetails) {
+      const duration =
+        (bookingDetails.endTime.getTime() -
+          bookingDetails.startTime.getTime()) /
+        (1000 * 60 * 60);
+
+      await sendEmail({
+        to: bookingDetails.student.email,
+        subject: "Guidely - Booking Confirmation",
+        templateName: "booking_confirmation",
+        templateData: {
+          studentName: bookingDetails.student.name,
+          mentorName: bookingDetails.mentor.name,
+          startTime: bookingDetails.startTime.toLocaleString(),
+          duration: `${duration} hours`,
+          meetingLink: bookingDetails.meetingLink,
+          dashboardUrl: `${envVars.FRONTEND_URL}/dashboard/student`,
+        },
+      });
+    }
   }
 
   return { received: true };
 };
 
+const refundPayment = async (bookingId: string) => {
+  const payment = await prisma.payment.findUnique({
+    where: { bookingId },
+  });
+
+  if (!payment || payment.status !== "PAID" || !payment.paymentIntentId) {
+    return null; // Nothing to refund or not paid
+  }
+
+  try {
+    const refund = await stripe.refunds.create({
+      payment_intent: payment.paymentIntentId,
+    });
+
+    await prisma.payment.update({
+      where: { bookingId },
+      data: {
+        status: "UNPAID", // Or add Refunced status
+        paymentGatewayData: JSON.parse(JSON.stringify(refund)),
+      },
+    });
+
+    return refund;
+  } catch (error: any) {
+    console.error("Stripe Refund Error:", error.message);
+    throw new AppError(status.INTERNAL_SERVER_ERROR, "Failed to process refund");
+  }
+};
+
 export const PaymentService = {
   createCheckoutSession,
   handleWebhook,
+  refundPayment,
 };

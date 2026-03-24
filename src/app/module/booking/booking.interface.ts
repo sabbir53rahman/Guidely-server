@@ -1,3 +1,5 @@
+import { AppointmentStatus, PaymentStatus } from "../../../generated/prisma";
+
 export interface ICreateBookingPayload {
   mentorId: string;
   startTime: string;
@@ -6,9 +8,10 @@ export interface ICreateBookingPayload {
 }
 
 export interface IUpdateBookingPayload {
-  status?: "SCHEDULED" | "INPROGRESS" | "COMPLETED" | "CANCELED";
-  paymentStatus?: "UNPAID" | "PAID";
+  status?: AppointmentStatus;
+  paymentStatus?: PaymentStatus;
   startTime?: string;
   endTime?: string;
   notes?: string;
+  meetingLink?: string;
 }

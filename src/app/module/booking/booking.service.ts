@@ -217,6 +217,7 @@ const updateBooking = async (id: string, payload: IUpdateBookingPayload) => {
       startTime: payload.startTime ? new Date(payload.startTime) : undefined,
       endTime: payload.endTime ? new Date(payload.endTime) : undefined,
       notes: payload.notes,
+      meetingLink: payload.meetingLink,
     },
   });
 
@@ -239,6 +240,32 @@ const deleteBooking = async (id: string) => {
   return deletedBooking;
 };
 
+const cancelBooking = async (id: string) => {
+  const booking = await prisma.booking.findUnique({
+    where: { id },
+  });
+
+  if (!booking) {
+    throw new AppError(status.NOT_FOUND, "Booking not found");
+  }
+
+  // 1. Trigger Refund if PAID
+  if (booking.paymentStatus === "PAID") {
+    await PaymentService.refundPayment(id);
+  }
+
+  // 2. Update status to CANCELED
+  const result = await prisma.booking.update({
+    where: { id },
+    data: {
+      status: "CANCELED",
+      paymentStatus: booking.paymentStatus === "PAID" ? "UNPAID" : booking.paymentStatus,
+    },
+  });
+
+  return result;
+};
+
 export const BookingService = {
   createBooking,
   getAllBookings,
@@ -246,4 +273,5 @@ export const BookingService = {
   getBookingById,
   updateBooking,
   deleteBooking,
+  cancelBooking,
 };
