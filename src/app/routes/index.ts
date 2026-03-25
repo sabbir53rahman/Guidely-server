@@ -7,6 +7,7 @@ import { MentorRoutes } from "../module/mentor/mentor.route";
 import { BookingRoutes } from "../module/booking/booking.route";
 import { ReviewRoutes } from "../module/review/review.route";
 import { PaymentRoutes } from "../module/payment/payment.route";
+import { MetaRoutes } from "../module/meta/meta.route";
 
 const router = Router();
 
@@ -18,5 +19,6 @@ router.use("/schedules", ScheduleRoutes);
 router.use("/bookings", BookingRoutes);
 router.use("/reviews", ReviewRoutes);
 router.use("/payments", PaymentRoutes);
+router.use("/meta", MetaRoutes);
 
 export const IndexRoutes = router;
