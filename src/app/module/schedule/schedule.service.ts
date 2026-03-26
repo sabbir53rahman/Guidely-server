@@ -38,6 +38,25 @@ const createSchedule = async (user: IRequestUser, payload: ICreateSchedulePayloa
   return schedule;
 };
 
+const getAllSchedules = async () => {
+  const schedules = await prisma.schedule.findMany({
+    include: {
+      mentor: {
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            }
+          }
+        }
+      }
+    }
+  });
+  return schedules;
+};
+
 const getMySchedules = async (user: IRequestUser) => {
   const mentor = await prisma.mentor.findUnique({
     where: { userId: user.userId },
@@ -113,6 +132,7 @@ const deleteSchedule = async (id: string, user: IRequestUser) => {
 
 export const ScheduleService = {
   createSchedule,
+  getAllSchedules,
   getMySchedules,
   updateSchedule,
   deleteSchedule,

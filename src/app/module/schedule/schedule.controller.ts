@@ -16,6 +16,17 @@ const createSchedule = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const getAllSchedules = catchAsync(async (req: Request, res: Response) => {
+  const result = await ScheduleService.getAllSchedules();
+
+  sendResponse(res, {
+    httpStatusCode: status.OK,
+    success: true,
+    message: "All schedules retrieved successfully",
+    data: result,
+  });
+});
+
 const getMySchedules = catchAsync(async (req: Request, res: Response) => {
   const user = req.user;
   const result = await ScheduleService.getMySchedules(user);
@@ -56,6 +67,7 @@ const deleteSchedule = catchAsync(async (req: Request, res: Response) => {
 
 export const ScheduleController = {
   createSchedule,
+  getAllSchedules,
   getMySchedules,
   updateSchedule,
   deleteSchedule,
