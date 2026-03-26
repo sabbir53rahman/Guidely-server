@@ -3,14 +3,20 @@ import { DayOfWeek } from "../../../generated/prisma";
 import AppError from "../../errorHelpers/appError";
 import { IRequestUser } from "../../interfaces/requestUser.interface";
 import { prisma } from "../../lib/prisma";
-import { ICreateBookingPayload, IUpdateBookingPayload } from "./booking.interface";
+import {
+  ICreateBookingPayload,
+  IUpdateBookingPayload,
+} from "./booking.interface";
 import { IQueryParams } from "../../interfaces/query.interface";
 import { QueryBuilder } from "../../utils/QueryBuilder";
 import { Booking } from "../../../generated/prisma";
 import { bookingSearchableFields } from "./booking.constants";
 import { PaymentService } from "../payment/payment.service";
 
-const createBooking = async (user: IRequestUser, payload: ICreateBookingPayload) => {
+const createBooking = async (
+  user: IRequestUser,
+  payload: ICreateBookingPayload,
+) => {
   const student = await prisma.student.findUnique({
     where: {
       userId: user.userId,
@@ -33,7 +39,10 @@ const createBooking = async (user: IRequestUser, payload: ICreateBookingPayload)
   }
 
   if (!mentor.isAvailable) {
-    throw new AppError(status.FORBIDDEN, "This mentor is not currently accepting bookings.");
+    throw new AppError(
+      status.FORBIDDEN,
+      "This mentor is not currently accepting bookings.",
+    );
   }
 
   const startDateTime = new Date(payload.startTime);
@@ -43,7 +52,15 @@ const createBooking = async (user: IRequestUser, payload: ICreateBookingPayload)
     throw new AppError(status.BAD_REQUEST, "End time must be after start time");
   }
 
-  const days = ["SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"];
+  const days = [
+    "SUNDAY",
+    "MONDAY",
+    "TUESDAY",
+    "WEDNESDAY",
+    "THURSDAY",
+    "FRIDAY",
+    "SATURDAY",
+  ];
   const dayOfWeek = days[startDateTime.getDay()] as DayOfWeek;
 
   // 1. Check if Mentor operates on this day
@@ -57,23 +74,35 @@ const createBooking = async (user: IRequestUser, payload: ICreateBookingPayload)
   });
 
   if (!schedule) {
-    throw new AppError(status.BAD_REQUEST, `Mentor is not available on ${dayOfWeek}`);
+    throw new AppError(
+      status.BAD_REQUEST,
+      `Mentor is not available on ${dayOfWeek}`,
+    );
   }
 
   // 2. Validate requested time falls within the mentor's scheduled working hours for that day
-  const requestedStartMinutes = startDateTime.getHours() * 60 + startDateTime.getMinutes();
-  const requestedEndMinutes = endDateTime.getHours() * 60 + endDateTime.getMinutes();
+  const requestedStartMinutes =
+    startDateTime.getHours() * 60 + startDateTime.getMinutes();
+  const requestedEndMinutes =
+    endDateTime.getHours() * 60 + endDateTime.getMinutes();
 
-  const [scheduleStartHour, scheduleStartMin] = schedule.startTime.split(":").map(Number);
-  const [scheduleEndHour, scheduleEndMin] = schedule.endTime.split(":").map(Number);
+  const [scheduleStartHour, scheduleStartMin] = schedule.startTime
+    .split(":")
+    .map(Number);
+  const [scheduleEndHour, scheduleEndMin] = schedule.endTime
+    .split(":")
+    .map(Number);
 
   const scheduleStartMinutes = scheduleStartHour * 60 + scheduleStartMin;
   const scheduleEndMinutes = scheduleEndHour * 60 + scheduleEndMin;
 
-  if (requestedStartMinutes < scheduleStartMinutes || requestedEndMinutes > scheduleEndMinutes) {
+  if (
+    requestedStartMinutes < scheduleStartMinutes ||
+    requestedEndMinutes > scheduleEndMinutes
+  ) {
     throw new AppError(
       status.BAD_REQUEST,
-      `Requested time is outside mentor's scheduled hours for this day (${schedule.startTime} - ${schedule.endTime})`
+      `Requested time is outside mentor's scheduled hours for this day (${schedule.startTime} - ${schedule.endTime})`,
     );
   }
 
@@ -100,7 +129,10 @@ const createBooking = async (user: IRequestUser, payload: ICreateBookingPayload)
   });
 
   if (existingBooking) {
-    throw new AppError(status.CONFLICT, "Mentor already has a conflicting booking at the requested time");
+    throw new AppError(
+      status.CONFLICT,
+      "Mentor already has a conflicting booking at the requested time",
+    );
   }
 
   const result = await prisma.$transaction(async (tx) => {
@@ -118,7 +150,9 @@ const createBooking = async (user: IRequestUser, payload: ICreateBookingPayload)
 
     let paymentSessionUrl = null;
     if (mentor.hourlyRate > 0) {
-      paymentSessionUrl = await PaymentService.createCheckoutSession(booking.id);
+      paymentSessionUrl = await PaymentService.createCheckoutSession(
+        booking.id,
+      );
     }
 
     return { ...booking, paymentSessionUrl };
@@ -152,13 +186,15 @@ const getMyBookings = async (user: IRequestUser, queryParams: IQueryParams) => {
     const student = await prisma.student.findUnique({
       where: { userId: user.userId },
     });
-    if (!student) throw new AppError(status.NOT_FOUND, "Student profile not found");
+    if (!student)
+      throw new AppError(status.NOT_FOUND, "Student profile not found");
     condition.studentId = student.id;
   } else if (user.role === "MENTOR") {
     const mentor = await prisma.mentor.findUnique({
       where: { userId: user.userId },
     });
-    if (!mentor) throw new AppError(status.NOT_FOUND, "Mentor profile not found");
+    if (!mentor)
+      throw new AppError(status.NOT_FOUND, "Mentor profile not found");
     condition.mentorId = mentor.id;
   } else {
     // If admin, they probably shouldn't use "getMyBookings", but just in case
@@ -233,6 +269,10 @@ const deleteBooking = async (id: string) => {
     throw new AppError(status.NOT_FOUND, "Booking not found");
   }
 
+  await prisma.payment.deleteMany({
+    where: { bookingId: id },
+  });
+
   const deletedBooking = await prisma.booking.delete({
     where: { id },
   });
@@ -254,13 +294,14 @@ const cancelBooking = async (id: string) => {
     await PaymentService.refundPayment(id);
   }
 
-  // 2. Update status to CANCELED
-  const result = await prisma.booking.update({
+  // 2. Delete payment record first (to satisfy Prisma relation constraints)
+  await prisma.payment.deleteMany({
+    where: { bookingId: id },
+  });
+
+  // 3. Delete the booking completely from the database
+  const result = await prisma.booking.delete({
     where: { id },
-    data: {
-      status: "CANCELED",
-      paymentStatus: booking.paymentStatus === "PAID" ? "UNPAID" : booking.paymentStatus,
-    },
   });
 
   return result;
