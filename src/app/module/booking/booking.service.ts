@@ -12,6 +12,7 @@ import { QueryBuilder } from "../../utils/QueryBuilder";
 import { Booking } from "../../../generated/prisma";
 import { bookingSearchableFields } from "./booking.constants";
 import { PaymentService } from "../payment/payment.service";
+import crypto from "crypto";
 
 const createBooking = async (
   user: IRequestUser,
@@ -136,6 +137,9 @@ const createBooking = async (
   }
 
   const result = await prisma.$transaction(async (tx) => {
+    const uniqueMeetingId = crypto.randomBytes(8).toString("hex");
+    const dynamicMeetingLink = `https://meet.jit.si/Guidely-${uniqueMeetingId}`;
+
     const booking = await tx.booking.create({
       data: {
         studentId: student.id,
@@ -145,6 +149,7 @@ const createBooking = async (
         notes: payload.notes,
         status: mentor.hourlyRate > 0 ? "PENDING" : "SCHEDULED",
         paymentStatus: "UNPAID",
+        meetingLink: dynamicMeetingLink,
       },
     });
 
