@@ -12,6 +12,34 @@ router.get(
   checkAuth(Role.ADMIN, Role.SUPER_ADMIN),
   AdminController.getAllAdmins,
 );
+
+router.get(
+  "/users", 
+  checkAuth(Role.ADMIN, Role.SUPER_ADMIN), 
+  AdminController.getAllUsers
+);
+router.patch(
+  "/users/:userId/role",
+  checkAuth(Role.SUPER_ADMIN),
+  AdminController.updateUserRole,
+);
+router.patch(
+  "/users/:userId/toggle-status",
+  checkAuth(Role.ADMIN, Role.SUPER_ADMIN),
+  AdminController.toggleUserStatus,
+);
+router.delete(
+  "/users/:userId",
+  checkAuth(Role.SUPER_ADMIN),
+  AdminController.deleteUser,
+);
+
+router.get(
+  "/payments",
+  checkAuth(Role.ADMIN, Role.SUPER_ADMIN),
+  AdminController.getPaymentsOverview,
+);
+
 router.get(
   "/:id",
   checkAuth(Role.ADMIN, Role.SUPER_ADMIN),

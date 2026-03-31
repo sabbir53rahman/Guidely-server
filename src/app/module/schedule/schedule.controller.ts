@@ -3,6 +3,9 @@ import { catchAsync } from "../../shared/catchAsync";
 import { sendResponse } from "../../shared/sendResponse";
 import status from "http-status";
 import { ScheduleService } from "./schedule.service";
+import pick from "../../utils/pick";
+import { scheduleFilterableFields } from "./schedule.constants";
+import { IQueryParams } from "../../interfaces/query.interface";
 
 const createSchedule = catchAsync(async (req: Request, res: Response) => {
   const user = req.user;
@@ -17,13 +20,17 @@ const createSchedule = catchAsync(async (req: Request, res: Response) => {
 });
 
 const getAllSchedules = catchAsync(async (req: Request, res: Response) => {
-  const result = await ScheduleService.getAllSchedules();
+  const filters = pick(req.query, scheduleFilterableFields) as IQueryParams;
+  console.log("Filters applied:", filters);
+
+  const result = await ScheduleService.getAllSchedules(filters);
 
   sendResponse(res, {
     httpStatusCode: status.OK,
     success: true,
     message: "All schedules retrieved successfully",
-    data: result,
+    data: result.data,
+    meta: result.meta,
   });
 });
 

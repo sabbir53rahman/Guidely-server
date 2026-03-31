@@ -33,7 +33,22 @@ const getMentorReviews = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const getMyReviews = catchAsync(async (req: Request, res: Response) => {
+  const user = req.user;
+  const filters = pick(req.query, reviewFilterableFields) as IQueryParams;
+  const result = await ReviewService.getMyReviews(user, filters);
+
+  sendResponse(res, {
+    httpStatusCode: status.OK,
+    success: true,
+    message: "Your reviews fetched successfully",
+    meta: result.meta,
+    data: result.data,
+  });
+});
+
 export const ReviewController = {
   createReview,
   getMentorReviews,
+  getMyReviews,
 };

@@ -3,6 +3,8 @@ export const mentorSearchableFields: string[] = ["name", "email", "expertise", "
 export const mentorFilterableFields: string[] = [
   "searchTerm",
   "email",
+  "name",
+  "experience",
   "expertise",
   "isAvailable",
 ];

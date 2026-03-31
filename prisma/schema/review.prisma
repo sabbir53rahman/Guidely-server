@@ -4,6 +4,8 @@ model Review {
   student   Student  @relation(fields: [studentId], references: [id])
   mentorId  String
   mentor    Mentor   @relation(fields: [mentorId], references: [id])
+  bookingId String   @unique
+  booking   Booking  @relation(fields: [bookingId], references: [id])
   rating    Int // 1-5
   comment   String?
   createdAt DateTime @default(now())

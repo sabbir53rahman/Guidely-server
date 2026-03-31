@@ -8,6 +8,7 @@ model Schedule {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
-  @@unique([mentorId, dayOfWeek])
+  // Removed unique constraint to allow multiple schedules per day
+  // Overlap validation is handled in the service layer
   @@map("schedules")
 }

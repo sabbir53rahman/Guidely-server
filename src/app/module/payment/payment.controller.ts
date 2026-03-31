@@ -12,7 +12,7 @@ const createCheckoutSession = catchAsync(async (req: Request, res: Response) => 
     httpStatusCode: status.OK,
     success: true,
     message: "Payment session created successfully",
-    data: result,
+    data: { paymentSessionUrl: result },
   });
 });
 
@@ -30,7 +30,20 @@ const handleWebhook = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const verifyPayment = catchAsync(async (req: Request, res: Response) => {
+  const { sessionId } = req.query as { sessionId: string };
+  const result = await PaymentService.verifyPayment(sessionId);
+
+  sendResponse(res, {
+    httpStatusCode: status.OK,
+    success: true,
+    message: "Payment verified successfully",
+    data: result,
+  });
+});
+
 export const PaymentController = {
   createCheckoutSession,
   handleWebhook,
+  verifyPayment,
 };

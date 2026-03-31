@@ -1,12 +1,12 @@
 import status from "http-status";
-import { UserStatus } from "../../../generated/prisma";
+import { UserStatus, Role } from "../../../generated/prisma";
 import { prisma } from "../../lib/prisma";
 import { IUpdateAdminPayload } from "./admin.interface";
 import AppError from "../../errorHelpers/appError";
 import { IRequestUser } from "../../interfaces/requestUser.interface";
 import { IQueryParams } from "../../interfaces/query.interface";
 import { QueryBuilder } from "../../utils/QueryBuilder";
-import { Admin } from "../../../generated/prisma";
+import { Admin, User } from "../../../generated/prisma";
 import { adminSearchableFields } from "./admin.constants";
 import { userSafeSelect } from "../user/user.constants";
 
@@ -110,9 +110,227 @@ const deleteAdmin = async (id: string, user: IRequestUser) => {
   return result;
 };
 
+const getAllUsers = async (filters: IQueryParams, options: IQueryParams) => {
+  const queryBuilder = new QueryBuilder<User>(prisma.user, { ...filters, ...options }, {
+    searchableFields: ['name', 'email'],
+  })
+    .search()
+    .filter()
+    .paginate()
+    .sort()
+    .where({ isDeleted: false })
+    .include({
+      mentor: {
+        select: {
+          id: true,
+          expertise: true,
+          experience: true,
+          averageRating: true,
+          hourlyRate: true,
+        },
+      },
+      student: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          profilePhoto: true,
+        },
+      },
+    });
+
+  const result = await queryBuilder.execute();
+  return result;
+};
+
+const updateUserRole = async (userId: string, role: string) => {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+  });
+
+  if (!user) {
+    throw new AppError(status.NOT_FOUND, "User not found");
+  }
+
+  if (!Object.values(Role).includes(role as Role)) {
+    throw new AppError(status.BAD_REQUEST, "Invalid role");
+  }
+
+  const updatedUser = await prisma.user.update({
+    where: { id: userId },
+    data: { role: role as Role },
+    select: userSafeSelect,
+  });
+
+  return updatedUser;
+};
+
+const toggleUserStatus = async (userId: string) => {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+  });
+
+  if (!user) {
+    throw new AppError(status.NOT_FOUND, "User not found");
+  }
+
+  if (user.isDeleted) {
+    throw new AppError(status.BAD_REQUEST, "Cannot toggle status of deleted user");
+  }
+
+  const newStatus = user.status === UserStatus.ACTIVE ? UserStatus.BLOCKED : UserStatus.ACTIVE;
+
+  const updatedUser = await prisma.user.update({
+    where: { id: userId },
+    data: { status: newStatus },
+    select: userSafeSelect,
+  });
+
+  return updatedUser;
+};
+
+const deleteUser = async (userId: string, currentUser: IRequestUser) => {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+  });
+
+  if (!user) {
+    throw new AppError(status.NOT_FOUND, "User not found");
+  }
+
+  if (user.id === currentUser.userId) {
+    throw new AppError(status.BAD_REQUEST, "You cannot delete yourself");
+  }
+
+  if (user.isDeleted) {
+    throw new AppError(status.BAD_REQUEST, "User is already deleted");
+  }
+
+  const result = await prisma.$transaction(async (tx) => {
+    await tx.user.update({
+      where: { id: userId },
+      data: {
+        isDeleted: true,
+        deletedAt: new Date(),
+        status: UserStatus.DELETED,
+      },
+    });
+
+    if (user.role === Role.MENTOR) {
+      await tx.mentor.update({
+        where: { userId },
+        data: {
+          isDeleted: true,
+        },
+      });
+    }
+
+    if (user.role === Role.STUDENT) {
+      await tx.student.update({
+        where: { userId },
+        data: {
+          isDeleted: true,
+        },
+      });
+    }
+
+    if (user.role === Role.ADMIN) {
+      await tx.admin.update({
+        where: { userId },
+        data: {
+          isDeleted: true,
+          deletedAt: new Date(),
+        },
+      });
+    }
+
+    const deletedUser = await tx.user.findUnique({
+      where: { id: userId },
+      select: userSafeSelect,
+    });
+
+    return deletedUser;
+  });
+
+  return result;
+};
+
+const getPaymentsOverview = async () => {
+  // Get all paid payments with booking details
+  const payments = await prisma.payment.findMany({
+    where: { status: 'PAID' },
+    include: {
+      booking: {
+        include: {
+          student: {
+            select: { name: true }
+          },
+          mentor: {
+            select: { name: true }
+          }
+        }
+      }
+    },
+    orderBy: { createdAt: 'desc' }
+  });
+
+  // Calculate total revenue
+  const totalRevenue = payments.reduce((sum, payment) => sum + payment.amount, 0);
+
+  // Calculate monthly revenue for the last 12 months with proper month names
+  const monthlyRevenue: { month: string; year: number; revenue: number }[] = [];
+  const currentDate = new Date();
+  const monthNames = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+  
+  // Initialize monthly revenue for the last 12 months
+  for (let i = 11; i >= 0; i--) {
+    const date = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1);
+    monthlyRevenue.push({
+      month: monthNames[date.getMonth()],
+      year: date.getFullYear(),
+      revenue: 0
+    });
+  }
+  
+  // Calculate revenue for each month
+  payments.forEach(payment => {
+    const paymentDate = new Date(payment.createdAt);
+    const monthsDiff = currentDate.getMonth() - paymentDate.getMonth() + 
+                      (currentDate.getFullYear() - paymentDate.getFullYear()) * 12;
+    
+    if (monthsDiff >= 0 && monthsDiff < 12) {
+      const index = 11 - monthsDiff;
+      monthlyRevenue[index].revenue += payment.amount;
+    }
+  });
+
+  // Get recent transactions (last 10)
+  const recentTransactions = payments.slice(0, 10).map(payment => ({
+    id: payment.id,
+    amount: payment.amount,
+    student: payment.booking.student.name,
+    mentor: payment.booking.mentor.name,
+    date: payment.createdAt.toISOString()
+  }));
+
+  return {
+    totalRevenue,
+    monthlyRevenue,
+    recentTransactions
+  };
+};
+
 export const AdminService = {
   getAllAdmins,
   getAdminById,
   updateAdmin,
   deleteAdmin,
+  getAllUsers,
+  updateUserRole,
+  toggleUserStatus,
+  deleteUser,
+  getPaymentsOverview,
 };

@@ -42,6 +42,10 @@ const createCheckoutSession = async (bookingId: string) => {
     throw new AppError(status.BAD_REQUEST, "Minimum booking amount is $0.50");
   }
 
+  if (booking.paymentStatus === "PAID") {
+    throw new AppError(status.BAD_REQUEST, "This booking has already been paid.");
+  }
+
   // Generate a unique transaction ID
   const transactionId = `txn_${Date.now()}_${Math.random().toString(36).substring(7)}`;
 
@@ -71,10 +75,16 @@ const createCheckoutSession = async (bookingId: string) => {
     },
   });
 
-  // Create initial payment record
-  await prisma.payment.create({
-    data: {
+  // Create or Update initial payment record using upsert
+  await prisma.payment.upsert({
+    where: { bookingId: booking.id },
+    create: {
       bookingId: booking.id,
+      amount: totalAmountInCents / 100,
+      transactionId: transactionId,
+      status: "UNPAID",
+    },
+    update: {
       amount: totalAmountInCents / 100,
       transactionId: transactionId,
       status: "UNPAID",
@@ -189,8 +199,79 @@ const refundPayment = async (bookingId: string) => {
   }
 };
 
+const verifyPayment = async (sessionId: string) => {
+  const session = await stripe.checkout.sessions.retrieve(sessionId);
+
+  if (session.payment_status === "paid") {
+    const bookingId = session.client_reference_id;
+    const paymentIntentId = session.payment_intent;
+    const stripeEventId = session.id;
+
+    const booking = await prisma.booking.findUnique({
+      where: { id: bookingId as string },
+    });
+
+    if (booking && booking.paymentStatus !== "PAID") {
+      await prisma.$transaction(async (tx) => {
+        // 1. Update Booking
+        await tx.booking.update({
+          where: { id: bookingId as string },
+          data: {
+            paymentStatus: "PAID",
+            status: "SCHEDULED",
+          },
+        });
+
+        // 2. Update Payment
+        await tx.payment.update({
+          where: { bookingId: bookingId as string },
+          data: {
+            status: "PAID",
+            paymentIntentId: paymentIntentId as string,
+            stripeEventId: stripeEventId,
+            paymentGatewayData: JSON.parse(JSON.stringify(session)),
+          },
+        });
+      });
+
+      // 3. Send Confirmation Email
+      const bookingDetails = await prisma.booking.findUnique({
+        where: { id: bookingId as string },
+        include: {
+          student: true,
+          mentor: true,
+        },
+      });
+
+      if (bookingDetails) {
+        const duration =
+          (bookingDetails.endTime.getTime() -
+            bookingDetails.startTime.getTime()) /
+          (1000 * 60 * 60);
+
+        await sendEmail({
+          to: bookingDetails.student.email,
+          subject: "Guidely - Booking Confirmation",
+          templateName: "booking_confirmation",
+          templateData: {
+            studentName: bookingDetails.student.name,
+            mentorName: bookingDetails.mentor.name,
+            startTime: bookingDetails.startTime.toLocaleString(),
+            duration: `${duration} hours`,
+            meetingLink: bookingDetails.meetingLink,
+            dashboardUrl: `${envVars.FRONTEND_URL}/dashboard/student`,
+          },
+        });
+      }
+    }
+    return { success: true };
+  }
+  return { success: false };
+};
+
 export const PaymentService = {
   createCheckoutSession,
   handleWebhook,
   refundPayment,
+  verifyPayment,
 };

@@ -61,9 +61,81 @@ const deleteAdmin = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const getAllUsers = catchAsync(async (req: Request, res: Response) => {
+  const filters = pick(req.query, ["role", "search", "status"]) as IQueryParams;
+  const options = pick(req.query, ["page", "limit"]) as IQueryParams;
+
+  const result = await AdminService.getAllUsers(filters, options);
+
+  sendResponse(res, {
+    httpStatusCode: status.OK,
+    success: true,
+    message: "Users fetched successfully",
+    meta: result.meta,
+    data: result.data,
+  });
+});
+
+const updateUserRole = catchAsync(async (req: Request, res: Response) => {
+  const { userId } = req.params;
+  const { role } = req.body;
+
+  const result = await AdminService.updateUserRole(userId as string, role);
+
+  sendResponse(res, {
+    httpStatusCode: status.OK,
+    success: true,
+    message: "User role updated successfully",
+    data: result,
+  });
+});
+
+const toggleUserStatus = catchAsync(async (req: Request, res: Response) => {
+  const { userId } = req.params;
+
+  const result = await AdminService.toggleUserStatus(userId as string);
+
+  sendResponse(res, {
+    httpStatusCode: status.OK,
+    success: true,
+    message: "User status toggled successfully",
+    data: result,
+  });
+});
+
+const deleteUser = catchAsync(async (req: Request, res: Response) => {
+  const { userId } = req.params;
+  const user = req.user;
+
+  const result = await AdminService.deleteUser(userId as string, user);
+
+  sendResponse(res, {
+    httpStatusCode: status.OK,
+    success: true,
+    message: "User deleted successfully",
+    data: result,
+  });
+});
+
+const getPaymentsOverview = catchAsync(async (req: Request, res: Response) => {
+  const result = await AdminService.getPaymentsOverview();
+
+  sendResponse(res, {
+    httpStatusCode: status.OK,
+    success: true,
+    message: "Payments overview fetched successfully",
+    data: result,
+  });
+});
+
 export const AdminController = {
   getAllAdmins,
   updateAdmin,
   deleteAdmin,
   getAdminById,
+  getAllUsers,
+  updateUserRole,
+  toggleUserStatus,
+  deleteUser,
+  getPaymentsOverview,
 };

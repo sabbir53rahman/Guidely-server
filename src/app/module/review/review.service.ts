@@ -17,6 +17,7 @@ const createReview = async (user: IRequestUser, payload: ICreateReviewPayload) =
     throw new AppError(status.NOT_FOUND, "Student profile not found");
   }
 
+  // 1. Validate mentor exists
   const mentor = await prisma.mentor.findUnique({
     where: { id: payload.mentorId },
   });
@@ -25,46 +26,46 @@ const createReview = async (user: IRequestUser, payload: ICreateReviewPayload) =
     throw new AppError(status.NOT_FOUND, "Mentor not found");
   }
 
+  // 2. Validate rating
   if (payload.rating < 1 || payload.rating > 5) {
     throw new AppError(status.BAD_REQUEST, "Rating must be between 1 and 5");
   }
 
-  // Check if student has a COMPLETED booking with this mentor
-  const completedBooking = await prisma.booking.findFirst({
+  // 3. Check if booking exists, belongs to student, and is COMPLETED
+  const targetBooking = await prisma.booking.findUnique({
     where: {
+      id: payload.bookingId,
       studentId: student.id,
       mentorId: mentor.id,
       status: "COMPLETED",
     },
   });
 
-  if (!completedBooking) {
+  if (!targetBooking) {
     throw new AppError(
       status.FORBIDDEN,
-      "You can only review a mentor after completing a booking session with them"
+      "You can only review a mentor after completing a verified booking session with them"
     );
   }
 
-  // Prevent multiple reviews from same student for same mentor, or allow it. Most platforms limit 1 review per mentor per student.
-  const existingReview = await prisma.review.findFirst({
-    where: {
-      studentId: student.id,
-      mentorId: mentor.id,
-    },
+  // 4. Check if a review already exists for this specific booking
+  const existingReview = await prisma.review.findUnique({
+    where: { bookingId: payload.bookingId },
   });
 
   if (existingReview) {
-    throw new AppError(status.BAD_REQUEST, "You have already reviewed this mentor");
+    throw new AppError(status.BAD_REQUEST, "You have already reviewed this specific session.");
   }
 
   const result = await prisma.$transaction(async (tx) => {
-    // 1. Create the review
+    // Create the review linked to the booking
     const review = await tx.review.create({
       data: {
         studentId: student.id,
         mentorId: mentor.id,
+        bookingId: payload.bookingId,
         rating: payload.rating,
-        comment: payload.comment,
+        comment: payload.comment || "N/A",
       },
     });
 
@@ -113,7 +114,73 @@ const getMentorReviews = async (mentorId: string, queryParams: IQueryParams) => 
   return result;
 };
 
+const getMyReviews = async (user: IRequestUser, queryParams: IQueryParams) => {
+  if (user.role === "STUDENT") {
+    const student = await prisma.student.findUnique({
+      where: { userId: user.userId },
+    });
+
+    if (!student) {
+      throw new AppError(status.NOT_FOUND, "Student profile not found");
+    }
+
+    const queryBuilder = new QueryBuilder<Review>(prisma.review, queryParams, {
+      searchableFields: reviewSearchableFields,
+    })
+      .search()
+      .filter()
+      .paginate()
+      .sort()
+      .where({ studentId: student.id })
+      .include({
+        mentor: {
+          select: {
+            name: true,
+            profilePhoto: true,
+            expertise: true,
+          },
+        },
+      });
+
+    const result = await queryBuilder.execute();
+    return result;
+  }
+
+  if (user.role === "MENTOR") {
+    const mentor = await prisma.mentor.findUnique({
+      where: { userId: user.userId },
+    });
+
+    if (!mentor) {
+      throw new AppError(status.NOT_FOUND, "Mentor profile not found");
+    }
+
+    const queryBuilder = new QueryBuilder<Review>(prisma.review, queryParams, {
+      searchableFields: reviewSearchableFields,
+    })
+      .search()
+      .filter()
+      .paginate()
+      .sort()
+      .where({ mentorId: mentor.id })
+      .include({
+        student: {
+          select: {
+            name: true,
+            profilePhoto: true,
+          },
+        },
+      });
+
+    const result = await queryBuilder.execute();
+    return result;
+  }
+
+  throw new AppError(status.UNAUTHORIZED, "Unauthorized action");
+};
+
 export const ReviewService = {
   createReview,
   getMentorReviews,
+  getMyReviews,
 };

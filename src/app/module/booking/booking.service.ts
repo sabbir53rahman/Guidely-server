@@ -49,6 +49,16 @@ const createBooking = async (
   const startDateTime = new Date(payload.startTime);
   const endDateTime = new Date(payload.endTime);
 
+  const now = new Date();
+  const thirtyMinutesFromNow = new Date(now.getTime() + 30 * 60 * 1000);
+
+  if (startDateTime < thirtyMinutesFromNow) {
+    throw new AppError(
+      status.BAD_REQUEST,
+      "Booking must be made at least 30 minutes before the session starts.",
+    );
+  }
+
   if (startDateTime >= endDateTime) {
     throw new AppError(status.BAD_REQUEST, "End time must be after start time");
   }
@@ -64,55 +74,54 @@ const createBooking = async (
   ];
   const dayOfWeek = days[startDateTime.getDay()] as DayOfWeek;
 
-  // 1. Check if Mentor operates on this day
-  const schedule = await prisma.schedule.findUnique({
+  // 1. Check if Mentor has a scheduled slot that covers this time range on this day
+  const requestStartStr =
+    startDateTime.getHours().toString().padStart(2, "0") +
+    ":" +
+    startDateTime.getMinutes().toString().padStart(2, "0");
+  const requestEndStr =
+    endDateTime.getHours().toString().padStart(2, "0") +
+    ":" +
+    endDateTime.getMinutes().toString().padStart(2, "0");
+
+  const schedule = await prisma.schedule.findFirst({
     where: {
-      mentorId_dayOfWeek: {
-        mentorId: mentor.id,
-        dayOfWeek: dayOfWeek,
-      },
+      mentorId: mentor.id,
+      dayOfWeek: dayOfWeek,
+      startTime: { lte: requestStartStr },
+      endTime: { gte: requestEndStr },
     },
   });
 
   if (!schedule) {
     throw new AppError(
       status.BAD_REQUEST,
-      `Mentor is not available on ${dayOfWeek}`,
-    );
-  }
-
-  // 2. Validate requested time falls within the mentor's scheduled working hours for that day
-  const requestedStartMinutes =
-    startDateTime.getHours() * 60 + startDateTime.getMinutes();
-  const requestedEndMinutes =
-    endDateTime.getHours() * 60 + endDateTime.getMinutes();
-
-  const [scheduleStartHour, scheduleStartMin] = schedule.startTime
-    .split(":")
-    .map(Number);
-  const [scheduleEndHour, scheduleEndMin] = schedule.endTime
-    .split(":")
-    .map(Number);
-
-  const scheduleStartMinutes = scheduleStartHour * 60 + scheduleStartMin;
-  const scheduleEndMinutes = scheduleEndHour * 60 + scheduleEndMin;
-
-  if (
-    requestedStartMinutes < scheduleStartMinutes ||
-    requestedEndMinutes > scheduleEndMinutes
-  ) {
-    throw new AppError(
-      status.BAD_REQUEST,
-      `Requested time is outside mentor's scheduled hours for this day (${schedule.startTime} - ${schedule.endTime})`,
+      `Mentor is not available at the requested time on ${dayOfWeek} (${requestStartStr} - ${requestEndStr}).`,
     );
   }
 
   // 3. Detect Conflicts (Overlapping Bookings)
+  // First, cleanup 'expired' PENDING bookings that haven't been paid for 15+ minutes
+  const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000);
+  await prisma.booking.deleteMany({
+    where: {
+      mentorId: mentor.id,
+      status: "PENDING",
+      createdAt: {
+        lt: fifteenMinutesAgo,
+      },
+      AND: [
+        { startTime: { lt: endDateTime } },
+        { endTime: { gt: startDateTime } },
+      ],
+    },
+  });
+
   const existingBooking = await prisma.booking.findFirst({
     where: {
       mentorId: mentor.id,
       status: {
-        in: ["SCHEDULED", "INPROGRESS"],
+        in: ["SCHEDULED", "INPROGRESS", "PENDING"],
       },
       AND: [
         {
@@ -132,7 +141,7 @@ const createBooking = async (
   if (existingBooking) {
     throw new AppError(
       status.CONFLICT,
-      "Mentor already has a conflicting booking at the requested time",
+      "This slot is currently being booked or already scheduled by another student.",
     );
   }
 
@@ -151,19 +160,37 @@ const createBooking = async (
         paymentStatus: "UNPAID",
         meetingLink: dynamicMeetingLink,
       },
+      include: {
+        student: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            profilePhoto: true,
+          },
+        },
+        mentor: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            profilePhoto: true,
+            expertise: true,
+            hourlyRate: true,
+          },
+        },
+      },
     });
 
-    let paymentSessionUrl = null;
-    if (mentor.hourlyRate > 0) {
-      paymentSessionUrl = await PaymentService.createCheckoutSession(
-        booking.id,
-      );
-    }
-
-    return { ...booking, paymentSessionUrl };
+    return booking;
   });
 
-  return result;
+  let paymentSessionUrl = null;
+  if (mentor.hourlyRate > 0) {
+    paymentSessionUrl = await PaymentService.createCheckoutSession(result.id);
+  }
+
+  return { ...result, paymentSessionUrl };
 };
 
 const getAllBookings = async (queryParams: IQueryParams) => {
@@ -175,9 +202,32 @@ const getAllBookings = async (queryParams: IQueryParams) => {
     .paginate()
     .sort()
     .include({
-      student: true,
-      mentor: true,
-      payment: true,
+      student: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          profilePhoto: true,
+        },
+      },
+      mentor: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          profilePhoto: true,
+          expertise: true,
+          hourlyRate: true,
+        },
+      },
+      payment: {
+        select: {
+          id: true,
+          amount: true,
+          transactionId: true,
+          status: true,
+        },
+      },
     });
 
   const result = await queryBuilder.execute();
@@ -215,9 +265,33 @@ const getMyBookings = async (user: IRequestUser, queryParams: IQueryParams) => {
     .sort()
     .where(condition)
     .include({
-      student: true,
-      mentor: true,
-      payment: true,
+      student: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          profilePhoto: true,
+        },
+      },
+      mentor: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          profilePhoto: true,
+          expertise: true,
+          hourlyRate: true,
+        },
+      },
+      payment: {
+        select: {
+          id: true,
+          amount: true,
+          transactionId: true,
+          status: true,
+        },
+      },
+      review: true,
     });
 
   const result = await queryBuilder.execute();
@@ -228,9 +302,32 @@ const getBookingById = async (id: string) => {
   const booking = await prisma.booking.findUnique({
     where: { id },
     include: {
-      student: true,
-      mentor: true,
-      payment: true,
+      student: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          profilePhoto: true,
+        },
+      },
+      mentor: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          profilePhoto: true,
+          expertise: true,
+          hourlyRate: true,
+        },
+      },
+      payment: {
+        select: {
+          id: true,
+          amount: true,
+          transactionId: true,
+          status: true,
+        },
+      },
     },
   });
 
@@ -248,6 +345,17 @@ const updateBooking = async (id: string, payload: IUpdateBookingPayload) => {
 
   if (!booking) {
     throw new AppError(status.NOT_FOUND, "Booking not found");
+  }
+
+  // Prevent completing before the time is over
+  if (payload.status === "COMPLETED") {
+    const now = new Date();
+    if (now < booking.endTime) {
+      throw new AppError(
+        status.BAD_REQUEST,
+        "You cannot mark a booking as completed before the session time is officially over.",
+      );
+    }
   }
 
   const updatedBooking = await prisma.booking.update({
