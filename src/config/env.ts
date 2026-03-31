@@ -74,8 +74,8 @@ const loadEnvVariables = (): EnvConfig => {
     "SUPER_ADMIN_PASSWORD",
   ];
 
-  // Skip validation during build time (when running prisma generate)
-  if (process.argv.includes("prisma") || process.env.NODE_ENV === "build") {
+  // Skip validation during build time (when running prisma generate or tsup)
+  if (process.argv.includes("prisma") || process.argv.includes("tsup") || process.env.NODE_ENV === "build") {
     return {
       NODE_ENV: process.env.NODE_ENV || "development",
       PORT: process.env.PORT || "3000",

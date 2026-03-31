@@ -1,9 +1,8 @@
 {
   "version": 2,
-  "buildCommand": "pnpm install && pnpm run build",
   "builds": [
     {
-      "src": "src/index.ts",
+      "src": "src/server.ts",
       "use": "@vercel/node",
       "config": { "runtime": "nodejs20.x" }
     }
@@ -11,11 +10,7 @@
   "routes": [
     {
       "src": "/(.*)",
-      "dest": "/index.js"
+      "dest": "dist/src/server.js"
     }
-  ],
-  "env": {
-    "NODE_ENV": "production",
-    "PORT": "3000"
-  }
+  ]
 }
