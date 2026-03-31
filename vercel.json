@@ -1,16 +1,16 @@
 {
   "version": 2,
+  "buildCommand": "pnpm install && pnpm run build:vercel",
   "builds": [
     {
-      "src": "src/server.js",
-      "use": "@vercel/node",
-      "config": { "runtime": "nodejs20.x" }
+      "src": "api/index.js",
+      "use": "@vercel/node"
     }
   ],
   "routes": [
     {
       "src": "/(.*)",
-      "dest": "dist/src/server.js"
+      "dest": "api/index.js"
     }
   ]
 }

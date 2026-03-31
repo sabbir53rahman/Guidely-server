@@ -7,6 +7,7 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node dist/server.js",
     "build": "prisma generate && tsup",
+    "build:vercel": "prisma generate && tsup --config tsup.vercel.config.ts",
     "migrate": "prisma migrate dev",
     "generate": "prisma generate",
     "studio": "prisma studio",
@@ -15,7 +16,7 @@
     "lint": "eslint ./src/**/*",
     "stripe:webhook": "stripe listen --forward-to localhost:5000/webhook",
     "dev": "tsx watch src/server.ts",
-    "vercel-build": "npm run build",
+    "vercel-build": "npm run build:vercel",
     "vercel-deploy": "vercel --prod"
   },
   "keywords": [],
