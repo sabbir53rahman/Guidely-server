@@ -1,5 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import express, { Application, Request, Response } from "express";
+import express, { Express, Request, Response } from "express";
 import { IndexRoutes } from "./app/routes";
 import { globalErrorHandler } from "./app/middleware/globalErrorHandler";
 import { notFound } from "./app/middleware/notFound";
@@ -9,7 +8,7 @@ import cors from "cors";
 import { envVars } from "./config/env";
 import qs from "qs";
 
-const app: Application = express();
+const app: Express = express();
 
 app.set("query parser", (str: string) => qs.parse(str));
 
