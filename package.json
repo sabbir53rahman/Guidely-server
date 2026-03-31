@@ -14,16 +14,18 @@
     "pull": "prisma db pull",
     "lint": "eslint ./src/**/*",
     "stripe:webhook": "stripe listen --forward-to localhost:5000/webhook",
-    "dev": "tsx watch src/server.ts"
+    "dev": "tsx watch src/server.ts",
+    "vercel-build": "npm run build",
+    "vercel-deploy": "vercel --prod"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "packageManager": "pnpm@10.21.0",
   "type": "module",
   "dependencies": {
     "@prisma/adapter-pg": "^7.3.0",
     "@prisma/client": "^7.3.0",
+    "@vercel/node": "^3.0.0",
     "bcryptjs": "^3.0.3",
     "cloudinary": "^2.9.0",
     "cookie-parser": "^1.4.7",
