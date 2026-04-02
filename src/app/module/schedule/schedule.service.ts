@@ -141,7 +141,7 @@ const getAllSchedules = async (queryParams: IQueryParams) => {
   const result = (data as any[]).map((schedule) => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const isBooked = schedule.mentor.bookings.some((booking: any) => {
-      // 1. Check if same Day of Week (using local time to match schedule day)
+      // 1. Check if same Day of Week (convert UTC to Bangladesh local time)
       const days = [
         "SUNDAY",
         "MONDAY",
@@ -151,16 +151,21 @@ const getAllSchedules = async (queryParams: IQueryParams) => {
         "FRIDAY",
         "SATURDAY",
       ];
-      const bookingDay = days[booking.startTime.getDay()];
+      
+      // Convert UTC booking time to Bangladesh local time
+      const localStartTime = new Date(booking.startTime.toLocaleString('en-US', { timeZone: 'Asia/Dhaka' }));
+      const localEndTime = new Date(booking.endTime.toLocaleString('en-US', { timeZone: 'Asia/Dhaka' }));
+      
+      const bookingDay = days[localStartTime.getDay()];
       if (bookingDay !== schedule.dayOfWeek) return false;
 
       // 2. Check if time overlaps (using local hours/minutes to match schedule strings)
-      const startH = booking.startTime.getHours().toString().padStart(2, "0");
-      const startM = booking.startTime.getMinutes().toString().padStart(2, "0");
+      const startH = localStartTime.getHours().toString().padStart(2, "0");
+      const startM = localStartTime.getMinutes().toString().padStart(2, "0");
       const bookingStartStr = `${startH}:${startM}`;
 
-      const endH = booking.endTime.getHours().toString().padStart(2, "0");
-      const endM = booking.endTime.getMinutes().toString().padStart(2, "0");
+      const endH = localEndTime.getHours().toString().padStart(2, "0");
+      const endM = localEndTime.getMinutes().toString().padStart(2, "0");
       const bookingEndStr = `${endH}:${endM}`;
 
       return (
