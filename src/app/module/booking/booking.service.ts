@@ -72,17 +72,18 @@ const createBooking = async (
     "FRIDAY",
     "SATURDAY",
   ];
-  const dayOfWeek = days[startDateTime.getDay()] as DayOfWeek;
+  const dayOfWeek = days[startDateTime.getUTCDay()] as DayOfWeek;
 
   // 1. Check if Mentor has a scheduled slot that covers this time range on this day
+  // Use UTC time consistently for comparison
   const requestStartStr =
-    startDateTime.getHours().toString().padStart(2, "0") +
+    startDateTime.getUTCHours().toString().padStart(2, "0") +
     ":" +
-    startDateTime.getMinutes().toString().padStart(2, "0");
+    startDateTime.getUTCMinutes().toString().padStart(2, "0");
   const requestEndStr =
-    endDateTime.getHours().toString().padStart(2, "0") +
+    endDateTime.getUTCHours().toString().padStart(2, "0") +
     ":" +
-    endDateTime.getMinutes().toString().padStart(2, "0");
+    endDateTime.getUTCMinutes().toString().padStart(2, "0");
 
   const schedule = await prisma.schedule.findFirst({
     where: {
