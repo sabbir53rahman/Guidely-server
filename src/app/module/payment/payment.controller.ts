@@ -1,20 +1,22 @@
 import { Request, Response } from "express";
+import status from "http-status";
 import { catchAsync } from "../../shared/catchAsync";
 import { sendResponse } from "../../shared/sendResponse";
-import status from "http-status";
 import { PaymentService } from "./payment.service";
 
-const createCheckoutSession = catchAsync(async (req: Request, res: Response) => {
-  const { bookingId } = req.body;
-  const result = await PaymentService.createCheckoutSession(bookingId);
+const createCheckoutSession = catchAsync(
+  async (req: Request, res: Response) => {
+    const { bookingId } = req.body;
+    const result = await PaymentService.createCheckoutSession(bookingId);
 
-  sendResponse(res, {
-    httpStatusCode: status.OK,
-    success: true,
-    message: "Payment session created successfully",
-    data: { paymentSessionUrl: result },
-  });
-});
+    sendResponse(res, {
+      httpStatusCode: status.OK,
+      success: true,
+      message: "Payment session created successfully",
+      data: { paymentSessionUrl: result },
+    });
+  },
+);
 
 const handleWebhook = catchAsync(async (req: Request, res: Response) => {
   const signature = req.headers["stripe-signature"] as string;

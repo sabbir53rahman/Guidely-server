@@ -5,10 +5,13 @@ import { prisma } from "../../lib/prisma";
 import { ICreateReviewPayload } from "./review.interface";
 import { IQueryParams } from "../../interfaces/query.interface";
 import { QueryBuilder } from "../../utils/QueryBuilder";
-import { Review } from "../../../generated/prisma";
 import { reviewSearchableFields } from "./review.constants";
+import { Review } from "../../../generated/prisma/client";
 
-const createReview = async (user: IRequestUser, payload: ICreateReviewPayload) => {
+const createReview = async (
+  user: IRequestUser,
+  payload: ICreateReviewPayload,
+) => {
   const student = await prisma.student.findUnique({
     where: { userId: user.userId },
   });
@@ -44,7 +47,7 @@ const createReview = async (user: IRequestUser, payload: ICreateReviewPayload) =
   if (!targetBooking) {
     throw new AppError(
       status.FORBIDDEN,
-      "You can only review a mentor after completing a verified booking session with them"
+      "You can only review a mentor after completing a verified booking session with them",
     );
   }
 
@@ -54,7 +57,10 @@ const createReview = async (user: IRequestUser, payload: ICreateReviewPayload) =
   });
 
   if (existingReview) {
-    throw new AppError(status.BAD_REQUEST, "You have already reviewed this specific session.");
+    throw new AppError(
+      status.BAD_REQUEST,
+      "You have already reviewed this specific session.",
+    );
   }
 
   const result = await prisma.$transaction(async (tx) => {
@@ -92,7 +98,10 @@ const createReview = async (user: IRequestUser, payload: ICreateReviewPayload) =
   return result;
 };
 
-const getMentorReviews = async (mentorId: string, queryParams: IQueryParams) => {
+const getMentorReviews = async (
+  mentorId: string,
+  queryParams: IQueryParams,
+) => {
   const queryBuilder = new QueryBuilder<Review>(prisma.review, queryParams, {
     searchableFields: reviewSearchableFields,
   })

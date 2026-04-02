@@ -1,4 +1,7 @@
-import { AppointmentStatus, PaymentStatus } from "../../../generated/prisma";
+import {
+  AppointmentStatus,
+  PaymentStatus,
+} from "../../../generated/prisma/enums";
 
 export interface ICreateBookingPayload {
   mentorId: string;

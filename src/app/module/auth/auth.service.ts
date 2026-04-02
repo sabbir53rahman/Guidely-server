@@ -1,7 +1,5 @@
 import status from "http-status";
-import { UserStatus } from "../../../generated/prisma";
 import AppError from "../../errorHelpers/appError";
-import { prisma } from "../../lib/prisma";
 import { tokenHelpers } from "../../utils/token";
 import bcrypt from "bcryptjs";
 import { userSafeSelect } from "../user/user.constants";
@@ -10,6 +8,8 @@ import {
   IRegisterMentorPayload,
   IRegisterStudentPayload,
 } from "./auth.interface";
+import { UserStatus } from "../../../generated/prisma/enums";
+import { prisma } from "../../lib/prisma";
 
 const registerStudent = async (payload: IRegisterStudentPayload) => {
   const { name, email, password } = payload;

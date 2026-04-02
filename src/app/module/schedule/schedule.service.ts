@@ -5,9 +5,12 @@ import { prisma } from "../../lib/prisma";
 import { ICreateSchedulePayload } from "./schedule.interface";
 import { IQueryParams } from "../../interfaces/query.interface";
 import { QueryBuilder } from "../../utils/QueryBuilder";
-import { Schedule } from "../../../generated/prisma";
+import { Schedule } from "../../../generated/prisma/client";
 
-const createSchedule = async (user: IRequestUser, payload: ICreateSchedulePayload) => {
+const createSchedule = async (
+  user: IRequestUser,
+  payload: ICreateSchedulePayload,
+) => {
   const mentor = await prisma.mentor.findUnique({
     where: { userId: user.userId },
   });
@@ -54,11 +57,15 @@ const createSchedule = async (user: IRequestUser, payload: ICreateSchedulePayloa
 
 const getAllSchedules = async (queryParams: IQueryParams) => {
   const { searchTerm } = queryParams;
-  
+
   // Create query builder without searchable fields to avoid automatic search on dayOfWeek
-  const queryBuilder = new QueryBuilder<Schedule>(prisma.schedule, queryParams, {
-    searchableFields: [], // No direct searchable fields
-  })
+  const queryBuilder = new QueryBuilder<Schedule>(
+    prisma.schedule,
+    queryParams,
+    {
+      searchableFields: [], // No direct searchable fields
+    },
+  )
     .filter() // Only apply filters, not search
     .paginate()
     .sort()
@@ -85,10 +92,10 @@ const getAllSchedules = async (queryParams: IQueryParams) => {
 
   // Get the built query and modify where condition for mentor search
   const query = queryBuilder.getQuery();
-  
+
   // Start with existing where conditions from QueryBuilder filters
   let whereCondition = { ...query.where };
-  
+
   // Handle search for mentor name and email only
   if (searchTerm) {
     whereCondition = {
@@ -96,11 +103,11 @@ const getAllSchedules = async (queryParams: IQueryParams) => {
       mentor: {
         user: {
           OR: [
-            { name: { contains: searchTerm, mode: 'insensitive' } },
-            { email: { contains: searchTerm, mode: 'insensitive' } }
-          ]
-        }
-      }
+            { name: { contains: searchTerm, mode: "insensitive" } },
+            { email: { contains: searchTerm, mode: "insensitive" } },
+          ],
+        },
+      },
     };
   }
 
@@ -109,8 +116,12 @@ const getAllSchedules = async (queryParams: IQueryParams) => {
 
   // Execute the query with modified where condition
   const [total, data] = await Promise.all([
-    prisma.schedule.count({ where: query.where } as Parameters<typeof prisma.schedule.count>[0]),
-    prisma.schedule.findMany(query as Parameters<typeof prisma.schedule.findMany>[0])
+    prisma.schedule.count({ where: query.where } as Parameters<
+      typeof prisma.schedule.count
+    >[0]),
+    prisma.schedule.findMany(
+      query as Parameters<typeof prisma.schedule.findMany>[0],
+    ),
   ]);
 
   // Get pagination info
@@ -188,7 +199,11 @@ const getMySchedules = async (user: IRequestUser) => {
   return schedules;
 };
 
-const updateSchedule = async (id: string, user: IRequestUser, payload: Partial<ICreateSchedulePayload>) => {
+const updateSchedule = async (
+  id: string,
+  user: IRequestUser,
+  payload: Partial<ICreateSchedulePayload>,
+) => {
   const mentor = await prisma.mentor.findUnique({
     where: { userId: user.userId },
   });
@@ -206,7 +221,10 @@ const updateSchedule = async (id: string, user: IRequestUser, payload: Partial<I
   }
 
   if (scheduleInfo.mentorId !== mentor.id) {
-    throw new AppError(status.FORBIDDEN, "You cannot update another mentor's schedule");
+    throw new AppError(
+      status.FORBIDDEN,
+      "You cannot update another mentor's schedule",
+    );
   }
 
   const result = await prisma.schedule.update({
@@ -235,7 +253,10 @@ const deleteSchedule = async (id: string, user: IRequestUser) => {
   }
 
   if (scheduleInfo.mentorId !== mentor.id) {
-    throw new AppError(status.FORBIDDEN, "You cannot delete another mentor's schedule");
+    throw new AppError(
+      status.FORBIDDEN,
+      "You cannot delete another mentor's schedule",
+    );
   }
 
   const result = await prisma.schedule.delete({

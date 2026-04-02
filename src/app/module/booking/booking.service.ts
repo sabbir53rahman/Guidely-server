@@ -1,5 +1,4 @@
 import status from "http-status";
-import { DayOfWeek } from "../../../generated/prisma";
 import AppError from "../../errorHelpers/appError";
 import { IRequestUser } from "../../interfaces/requestUser.interface";
 import { prisma } from "../../lib/prisma";
@@ -9,10 +8,11 @@ import {
 } from "./booking.interface";
 import { IQueryParams } from "../../interfaces/query.interface";
 import { QueryBuilder } from "../../utils/QueryBuilder";
-import { Booking } from "../../../generated/prisma";
 import { bookingSearchableFields } from "./booking.constants";
 import { PaymentService } from "../payment/payment.service";
 import crypto from "crypto";
+import { DayOfWeek } from "../../../generated/prisma/enums";
+import { Booking } from "../../../generated/prisma/client";
 
 const createBooking = async (
   user: IRequestUser,

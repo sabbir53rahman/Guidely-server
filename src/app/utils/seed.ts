@@ -1,5 +1,5 @@
 import { envVars } from "../../config/env";
-import { Role } from "../../generated/prisma";
+import { Role } from "../../generated/prisma/enums";
 import { prisma } from "../lib/prisma";
 import bcrypt from "bcryptjs";
 

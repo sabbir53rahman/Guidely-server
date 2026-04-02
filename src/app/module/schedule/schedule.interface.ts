@@ -1,4 +1,4 @@
-import { DayOfWeek } from "../../../generated/prisma";
+import { DayOfWeek } from "../../../generated/prisma/enums";
 
 export interface ICreateSchedulePayload {
   dayOfWeek: DayOfWeek;
