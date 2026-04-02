@@ -62,8 +62,8 @@ const deleteAdmin = catchAsync(async (req: Request, res: Response) => {
 });
 
 const getAllUsers = catchAsync(async (req: Request, res: Response) => {
-  const filters = pick(req.query, ["role", "search", "status"]) as IQueryParams;
-  const options = pick(req.query, ["page", "limit"]) as IQueryParams;
+  const filters = pick(req.query, ["role", "searchTerm", "status"]) as IQueryParams;
+  const options = pick(req.query, ["page", "limit", "sortBy", "sortOrder"]) as IQueryParams;
 
   const result = await AdminService.getAllUsers(filters, options);
 

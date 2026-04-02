@@ -85,9 +85,12 @@ const deleteAdmin = async (id: string, user: IRequestUser) => {
   }
 
   const result = await prisma.$transaction(async (tx) => {
+    const deletedEmail = `deleted_${Date.now()}_${isAdminExist.email}`;
+
     await tx.admin.update({
       where: { id },
       data: {
+        email: deletedEmail,
         isDeleted: true,
         deletedAt: new Date(),
       },
@@ -96,6 +99,7 @@ const deleteAdmin = async (id: string, user: IRequestUser) => {
     await tx.user.update({
       where: { id: isAdminExist.userId },
       data: {
+        email: deletedEmail,
         isDeleted: true,
         deletedAt: new Date(),
         status: UserStatus.DELETED,
@@ -215,9 +219,12 @@ const deleteUser = async (userId: string, currentUser: IRequestUser) => {
   }
 
   const result = await prisma.$transaction(async (tx) => {
+    const deletedEmail = `deleted_${Date.now()}_${user.email}`;
+
     await tx.user.update({
       where: { id: userId },
       data: {
+        email: deletedEmail,
         isDeleted: true,
         deletedAt: new Date(),
         status: UserStatus.DELETED,
@@ -228,6 +235,7 @@ const deleteUser = async (userId: string, currentUser: IRequestUser) => {
       await tx.mentor.update({
         where: { userId },
         data: {
+          email: deletedEmail,
           isDeleted: true,
         },
       });
@@ -237,6 +245,7 @@ const deleteUser = async (userId: string, currentUser: IRequestUser) => {
       await tx.student.update({
         where: { userId },
         data: {
+          email: deletedEmail,
           isDeleted: true,
         },
       });
@@ -246,6 +255,7 @@ const deleteUser = async (userId: string, currentUser: IRequestUser) => {
       await tx.admin.update({
         where: { userId },
         data: {
+          email: deletedEmail,
           isDeleted: true,
           deletedAt: new Date(),
         },

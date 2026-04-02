@@ -157,9 +157,12 @@ const deleteMentor = async (id: string) => {
   }
 
   const result = await prisma.$transaction(async (tx) => {
+    const deletedEmail = `deleted_${Date.now()}_${isMentorExist.email}`;
+
     await tx.mentor.update({
       where: { id },
       data: {
+        email: deletedEmail,
         isDeleted: true,
       },
     });
@@ -167,6 +170,7 @@ const deleteMentor = async (id: string) => {
     await tx.user.update({
       where: { id: isMentorExist.userId },
       data: {
+        email: deletedEmail,
         isDeleted: true,
         status: UserStatus.DELETED,
       },
