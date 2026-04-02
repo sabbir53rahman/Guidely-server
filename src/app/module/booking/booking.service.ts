@@ -86,19 +86,25 @@ const createBooking = async (
   const dayOfWeek = days[startDateTime.getUTCDay()] as DayOfWeek;
 
   // 1. Check if Mentor has a scheduled slot that covers this time range on this day
-  // Use UTC time consistently for comparison
+  // Convert UTC booking time to local timezone for comparison with mentor schedules
+  // Use proper timezone conversion for Bangladesh (UTC+6)
+  const localStartDateTime = new Date(startDateTime.toLocaleString('en-US', { timeZone: 'Asia/Dhaka' }));
+  const localEndDateTime = new Date(endDateTime.toLocaleString('en-US', { timeZone: 'Asia/Dhaka' }));
+  
   const requestStartStr =
-    startDateTime.getUTCHours().toString().padStart(2, "0") +
+    localStartDateTime.getHours().toString().padStart(2, "0") +
     ":" +
-    startDateTime.getUTCMinutes().toString().padStart(2, "0");
+    localStartDateTime.getMinutes().toString().padStart(2, "0");
   const requestEndStr =
-    endDateTime.getUTCHours().toString().padStart(2, "0") +
+    localEndDateTime.getHours().toString().padStart(2, "0") +
     ":" +
-    endDateTime.getUTCMinutes().toString().padStart(2, "0");
+    localEndDateTime.getMinutes().toString().padStart(2, "0");
 
   // Debug logging for time conversion
-  console.log("UTC requestStartStr:", requestStartStr);
-  console.log("UTC requestEndStr:", requestEndStr);
+  console.log("Original UTC start:", startDateTime.toISOString());
+  console.log("Converted Local start:", localStartDateTime);
+  console.log("Local requestStartStr:", requestStartStr);
+  console.log("Local requestEndStr:", requestEndStr);
   console.log("Day of week:", dayOfWeek);
 
   const schedule = await prisma.schedule.findFirst({
