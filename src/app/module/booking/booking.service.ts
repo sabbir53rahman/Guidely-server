@@ -49,6 +49,17 @@ const createBooking = async (
   const startDateTime = new Date(payload.startTime);
   const endDateTime = new Date(payload.endTime);
 
+  // Debug logging
+  console.log("=== BOOKING TIME DEBUG ===");
+  console.log("Raw startTime:", payload.startTime);
+  console.log("Raw endTime:", payload.endTime);
+  console.log("Parsed startDateTime:", startDateTime);
+  console.log("Parsed endDateTime:", endDateTime);
+  console.log("Start UTC Hours:", startDateTime.getUTCHours());
+  console.log("Start Local Hours:", startDateTime.getHours());
+  console.log("End UTC Hours:", endDateTime.getUTCHours());
+  console.log("End Local Hours:", endDateTime.getHours());
+
   const now = new Date();
   const thirtyMinutesFromNow = new Date(now.getTime() + 30 * 60 * 1000);
 
@@ -84,6 +95,11 @@ const createBooking = async (
     endDateTime.getUTCHours().toString().padStart(2, "0") +
     ":" +
     endDateTime.getUTCMinutes().toString().padStart(2, "0");
+
+  // Debug logging for time conversion
+  console.log("UTC requestStartStr:", requestStartStr);
+  console.log("UTC requestEndStr:", requestEndStr);
+  console.log("Day of week:", dayOfWeek);
 
   const schedule = await prisma.schedule.findFirst({
     where: {
